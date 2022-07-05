@@ -1,7 +1,11 @@
-Para utilizar o homeassistant no docker:
-docker run -d --name homeassistant --privileged --restart=unless-stopped -e TZ=America/Sao_Paulo -v D:\Docker\homeassistant_config:/config --network=host ghcr.io/home-assistant/home-assistant:stable
+A senha para todas as aplicações é:
 
-http://<host>:8123
+Para utilizar o homeassistant no docker:
+docker run -d --name homeassistant -p 8123:8123 --privileged --restart=unless-stopped -e TZ=America/Sao_Paulo -v D:\Docker\homeassistant_config:/config ghcr.io/home-assistant/home-assistant:stable
+
+http://localhost:8123
+usuario: admin
+senha: senha
 
 Mais informações:
 https://www.home-assistant.io/installation/linux
