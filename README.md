@@ -9,3 +9,8 @@ senha: senha
 
 Mais informações:
 https://www.home-assistant.io/installation/linux
+
+mosquitto_sub -t "interruptor/touch0_status"
+mosquitto_sub -t "interruptor/touch2_status"
+mosquitto_sub -t "interruptor/touch0_click"
+mosquitto_sub -t "interruptor/touch2_click"

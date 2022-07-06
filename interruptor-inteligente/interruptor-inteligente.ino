@@ -2,10 +2,10 @@
 #include "PubSubClient.h"
 
 // TROCAR ESSAS LINHAS AQUI ---------
-const char* ssid = "Hakuna Matata";
-const char* password = "qwerty1234";
+const char* ssid = "Meca";
+const char* password = "33d7fdeb6a";
 // Add your MQTT Broker IP address:
-const char* mqtt_server = "192.168.201.96";
+const char* mqtt_server = "192.168.15.12";
 const int mqtt_port = 1883;
 // ----------------
 WiFiClient espClient;
@@ -61,8 +61,8 @@ void reconnect() {
     if (client.connect("ESP8266Client")) {
       Serial.println("connected");
       // Subscribe
-      client.subscribe("tomada/touch0_enable");
-      client.subscribe("tomada/touch2_enable");
+      client.subscribe("interruptor/touch0_enable");
+      client.subscribe("interruptor/touch2_enable");
     } else {
       Serial.print("failed, rc=");
       Serial.print(client.state());
@@ -84,7 +84,7 @@ void callback(char* topic, byte* message, unsigned int length) {
     }
     Serial.println();
 
-    if (String(topic) == "tomada/touch0_enable") {
+    if (String(topic) == "interruptor/touch0_enable") {
         if(messageTemp == "0") {
             Serial.println("touch0 desligado");
             touch0Enabled = false;
@@ -92,7 +92,7 @@ void callback(char* topic, byte* message, unsigned int length) {
             Serial.println("touch0 ligado");
             touch0Enabled = true;
         }
-    } else if (String(topic) == "tomada/touch2_enable") {
+    } else if (String(topic) == "interruptor/touch2_enable") {
         if(messageTemp == "0") {
             Serial.println("touch2 desligado");
             touch2Enabled = false;
@@ -133,24 +133,24 @@ void loop() {
             case OFF:
                 if(valorTouch0 < threshold) {
                     estadoTouch0 = PUSH;
-                    client.publish("tomada/touch0_status", "push");
+                    client.publish("interruptor/touch0_status", "push");
                 }
             break;
             case PUSH:
                 estadoTouch0 = ON;
                 tempoApertoTouch0 = millis();
-                client.publish("tomada/touch0_status", "on");
+                client.publish("interruptor/touch0_status", "on");
             break;
             case ON:
                 if(valorTouch0 >= threshold) {
                     estadoTouch0 = RELEASE;
-                    client.publish("tomada/touch0_status", "release");
+                    client.publish("interruptor/touch0_status", "release");
                 }
             break;
             case RELEASE:
                 estadoTouch0 = OFF;
                 lastTempoApertoTouch0 = millis() - tempoApertoTouch0;
-                client.publish("tomada/touch0_status", "off");
+                client.publish("interruptor/touch0_status", "off");
             break;
         }
         periodoTarefaTouch0 = millis() + TEMPO_PERIODO_TOUCH;
@@ -167,24 +167,24 @@ void loop() {
             case OFF:
                 if(valorTouch2 < threshold) {
                     estadoTouch2 = PUSH;
-                    client.publish("tomada/touch2_status", "push");
+                    client.publish("interruptor/touch2_status", "push");
                 }
             break;
             case PUSH:
                 estadoTouch2 = ON;
                 tempoApertoTouch2 = millis();
-                client.publish("tomada/touch2_status", "on");
+                client.publish("interruptor/touch2_status", "on");
             break;
             case ON:
                 if(valorTouch2 >= threshold) {
                     estadoTouch2 = RELEASE;
-                    client.publish("tomada/touch2_status", "release");
+                    client.publish("interruptor/touch2_status", "release");
                 }
             break;
             case RELEASE:
                 estadoTouch2 = OFF;
                 lastTempoApertoTouch2 = millis() - tempoApertoTouch2;
-                client.publish("tomada/touch2_status", "off");
+                client.publish("interruptor/touch2_status", "off");
             break;
         }
         periodoTarefaTouch2 = millis() + TEMPO_PERIODO_TOUCH;
@@ -192,19 +192,19 @@ void loop() {
 
     if (lastTempoApertoTouch0 > tempoMinimo) {
         if (lastTempoApertoTouch0 > tempoTouchLongo) {
-            client.publish("tomada/touch0_click", "longo");
+            client.publish("interruptor/touch0_click", "longo");
         }
         else {
-            client.publish("tomada/touch0_click", "curto");
+            client.publish("interruptor/touch0_click", "curto");
         }
         lastTempoApertoTouch0 = 0;
     }
     if (lastTempoApertoTouch2 > tempoMinimo) {
         if (lastTempoApertoTouch2 > tempoTouchLongo) {
-            client.publish("tomada/touch2_click", "longo");
+            client.publish("interruptor/touch2_click", "longo");
         }
         else {
-            client.publish("tomada/touch2_click", "curto");
+            client.publish("interruptor/touch2_click", "curto");
         }
         lastTempoApertoTouch2 = 0;
     }

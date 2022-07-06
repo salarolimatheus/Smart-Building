@@ -1,171 +1,126 @@
-#include <BLEDevice.h>
-#include <BLEServer.h>
-#include <BLEUtils.h>
-#include <BLE2902.h>
+#include "src/Wifi/Wifi.h"
+#include "PubSubClient.h"
 
-BLECharacteristic *Dados; //declaração das caracteristicas do BLE
-BLECharacteristic *Add; 
-bool deviceConnected = false;//estado do dispositivo 
-float txValue = 0;
-float Alt = 0;
+// TROCAR ESSAS LINHAS AQUI ---------
+const char* ssid = "Meca";
+const char* password = "33d7fdeb6a";
+// Add your MQTT Broker IP address:
+const char* mqtt_server = "192.168.15.12";
+const int mqtt_port = 1883;
+----------------
 
-// criação dos serviços e caracteristicas do ble
-#define SERVICE_UUID           "6E400001-B5A3-F393-E0A9-E50E24DCCA9E" // UART service UUID
-#define CHARACTERISTIC_UUID_RX "6E400003-B5A3-F393-E0A9-E50E24DCCA9E" //UUID das caracteristicas usadas
-#define CHARACTERISTIC_UUID_RX1 "6E400005-B5A3-F393-E0A9-E50E24DCCA9E"
-#define CHARACTERISTIC_UUID_TX "6E400002-B5A3-F393-E0A9-E50E24DCCA9E"
-#define CHARACTERISTIC_UUID_TX1 "6E400004-B5A3-F393-E0A9-E50E24DCCA9E"
-#define ONBOARD_LED  27
+#define pinLed 2
 
-// callback para alterar o estado do dispositivo para conectado
-class MyServerCallbacks: public BLEServerCallbacks {
-    void onConnect(BLEServer* pServer) {//caso o dispositivos esteja ligado seta a variavel booleana para 1
-      deviceConnected = true;
-    };
-
-    void onDisconnect(BLEServer* pServer) {//caso o dispositivos esteja desligado seta a variavel booleana para 0
-      deviceConnected = false;
-    }
-};
-
-//callback para recebimento de dados
-class MyCallbacks1: public BLECharacteristicCallbacks {
-    void onWrite (BLECharacteristic*Dados){
-      std::string rxValue=Dados->getValue();//pegamos dos dados recebidos com o getvalue e transferimos para uma string
-      if (rxValue.length()>0){//caso o comprimento do dado recebido seja maior que zero estaremos considerando que o sinal foi recebido com sucesso
-        Serial.println("===Start Receive===");
-        Serial.print("Received Value: ");
-        for (int i=0 ; i<rxValue.length();i++) {//e devemos escrever o sinal um caracter por vez
-          Serial.print(rxValue[i]);
-        }
-        Serial.println (" ");
-        Serial.println("====End====");
-      }
-    }
-};
-
-//callback para recebimento de dados
-class MyCallbacks: public BLECharacteristicCallbacks {
-    void onWrite (BLECharacteristic*Add){
-      std::string rxValue=Add->getValue();
-       if ((rxValue.length())==1){//nesse caso o aplicativo envia o caracter 1 ou 0 para o acionamento do LED, desse modo consideramos o comprimento da variavel de apenas 1
-        if(rxValue[0]=='1'){
-           digitalWrite(ONBOARD_LED,HIGH);
-        }
-        if (rxValue[0]=='0'){
-           digitalWrite(ONBOARD_LED,LOW);
-        }
-      }
-    }
-};
-
-// definir pinos usados nos sensores
-const int trigPin = 4;
-const int echoPin = 5;
-
-// definir variáveis
-long duration;
-int distance;
+WiFiClient espClient;
+PubSubClient client(espClient);
+long lastMsg = 0;
 
 void setup() {
-pinMode(ONBOARD_LED,OUTPUT);
-pinMode(trigPin, OUTPUT); // Sets the trigPin as an Output
-pinMode(echoPin, INPUT); // Sets the echoPin as an Input  
-  Serial.begin(115200);
+    pinMode(pinLed, OUTPUT);
+    Serial.begin(115200);
+    setup_wifi();
+    client.setServer(mqtt_server, mqtt_port);
+    client.setCallback(callback);
+}
 
-// Create the BLE Device
-  BLEDevice::init("ESP32 BLE"); // Give it a name
+void setup_wifi() {
+    delay(10);
+    // We start by connecting to a WiFi network
+    Serial.println();
+    Serial.print("Connecting to ");
+    Serial.println(ssid);
 
-// Create the BLE Server
-  BLEServer *pServer = BLEDevice::createServer();
-  pServer->setCallbacks(new MyServerCallbacks());
+    WiFi.begin(ssid, password);
 
-// Create the BLE Service
-  BLEService *pService = pServer->createService(SERVICE_UUID);
+    while (WiFi.status() != WL_CONNECTED) {
+        delay(500);
+        Serial.print(".");
+    }
 
-// Create a BLE Characteristic
-  Dados = pService->createCharacteristic(
-                      CHARACTERISTIC_UUID_TX,
-                      BLECharacteristic::PROPERTY_READ |
-                      BLECharacteristic::PROPERTY_NOTIFY
-                    );
+    Serial.println("");
+    Serial.println("WiFi connected");
+    Serial.println("IP address: ");
+    Serial.println(WiFi.localIP());
+}
 
-  Dados->addDescriptor(new BLE2902());
+void callback(char* topic, byte* message, unsigned int length) {
+    Serial.print("Message arrived on topic: ");
+    Serial.print(topic);
+    Serial.print(". Message: ");
+    String messageTemp;
 
-  Add = pService->createCharacteristic(
-                      CHARACTERISTIC_UUID_TX1,
-                      BLECharacteristic::PROPERTY_READ |
-                      BLECharacteristic::PROPERTY_NOTIFY
-                    );
+    for (int i = 0; i < length; i++) {
+        Serial.print((char)message[i]);
+        messageTemp += (char)message[i];
+    }
+    Serial.println();
 
-  Add->addDescriptor(new BLE2902());
-  
-// Create a BLE Characteristic
-  BLECharacteristic*Dados = pService->createCharacteristic(
-                      CHARACTERISTIC_UUID_RX,
-                      BLECharacteristic::PROPERTY_WRITE
-                    );
-                      
- Dados->setCallbacks (new MyCallbacks1());
+    // Feel free to add more if statements to control more GPIOs with MQTT
 
- BLECharacteristic*Add = pService->createCharacteristic(
-                      CHARACTERISTIC_UUID_RX1,
-                      BLECharacteristic::PROPERTY_WRITE
-                    );
-                      
- Add->setCallbacks (new MyCallbacks());
-      
-// Start the service
-  pService->start();
+    switch (String(topic)) {
+        case "tomada/tomada0_status":
+            if(messageTemp == "on") {
+                Serial.println("ligado");
+                digitalWrite(pinLed, HIGH);
+            } else {
+                Serial.println("desligado");
+                digitalWrite(pinLed, LOW);
+            }
+            break;
+        case "tomada/tomada1_status":
 
-// Start advertising
-  pServer->getAdvertising()->start();
-  Serial.println("Waiting a client connection to notify...");
+            break;
+        case "tomada/tomada0_timer":
+
+            break;
+        case "tomada/tomada1_timer":
+
+            break;
+    }
+    if (String(topic) == "tomada-inteligente/switch") {
+        if(messageTemp == "ligado") {
+            Serial.println("ligado");
+            client.publish("tomada/sub", "ligado");
+            digitalWrite(pinLed, HIGH);
+        } else {
+            Serial.println("desligado");
+            client.publish("tomada/sub", "desligado");
+            digitalWrite(pinLed, LOW);
+        }
+    } else if (String(topic) == "tomada/timer") {
+        Serial.println("ligado");
+        digitalWrite(pinLed, HIGH);
+        client.publish("tomada/sub", "ligado");
+        delay(5000);
+        Serial.println("desligado");
+        digitalWrite(pinLed, LOW);
+        client.publish("tomada/sub", "desligado");
+    }
+}
+
+void reconnect() {
+  // Loop until we're reconnected
+  while (!client.connected()) {
+    Serial.print("Attempting MQTT connection...");
+    // Attempt to connect
+    if (client.connect("ESP8266Client")) {
+      Serial.println("connected");
+      // Subscribe
+      client.subscribe("tomada-inteligente/switch");
+      client.subscribe("tomada/timer");
+    } else {
+      Serial.print("failed, rc=");
+      Serial.print(client.state());
+      Serial.println(" try again in 5 seconds");
+      // Wait 5 seconds before retrying
+      delay(5000);
+    }
+  }
 }
 
 void loop() {
-  if (deviceConnected) { 
-// informação transferida
-digitalWrite(trigPin, LOW);
-delayMicroseconds(5);
-
-// Pulso no pino Trigger
-digitalWrite(trigPin, HIGH);
-delayMicroseconds(10);
-digitalWrite(trigPin, LOW);
-
-// Leitura do pino ECHO
-duration = pulseIn(echoPin, HIGH);
-
-// Calcular distancia
-distance= duration*0.034/2;
-
-//imprimir distancia no monitor serial e no serialBT
-    txValue = distance;
-   
-//coverter para array
-    char txString[8]; // make sure this is big enuffz
-    dtostrf(txValue, 1, 2, txString); // float_val, min_width, digits_after_decimal, char_buffer
-    Dados->setValue(txString);
-
-//não existe necessidade de callback para enviar arquivo
-    Dados->notify(); // Send the value to the app!
-    Serial.print("*** Sent Value: ");
-    Serial.print(txString);
-    Serial.println(" ***");
-
-// informação transferida
-    Alt = random(-10,20);
-//coverter para array
-    char txAlt[8]; // make sure this is big enuffz
-    dtostrf(Alt, 1, 2, txAlt); // float_val, min_width, digits_after_decimal, char_buffer
-    Add->setValue(txAlt);
-
-//não existe necessidade de callback para enviar arquivo
-    Add->notify(); // Send the value to the app!
-    Serial.print("*** Sent Value: ");
-    Serial.print(txAlt);
-    Serial.println(" ***");
-  }
-  delay(1000);
+    if (!client.connected()) {
+        reconnect();
+    }
+    client.loop();
 }
