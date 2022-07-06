@@ -1,0 +1,3 @@
+05-07-2022: Sprint 1: Prototipagem
+1. Programação no ESP32 comunicando por MQTT(WiFi) com um PC
+2. Programação no ESP32 

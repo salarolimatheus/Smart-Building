@@ -1,21 +1,25 @@
 #include "src/Wifi/Wifi.h"
 #include "PubSubClient.h"
 
-// Replace the next variables with your SSID/Password combination
-const char* ssid = "smartbuilding";
-const char* password = "smartbuilding";
-
+// TROCAR ESSAS LINHAS AQUI ---------
+const char* ssid = "Hakuna Matata";
+const char* password = "qwerty1234";
 // Add your MQTT Broker IP address:
-const char* mqtt_server = "192.168.0.100";
+const char* mqtt_server = "192.168.201.96";
+const int mqtt_port = 1883;
+----------------
+
+#define pinLed 2
 
 WiFiClient espClient;
 PubSubClient client(espClient);
 long lastMsg = 0;
 
 void setup() {
+    pinMode(pinLed, OUTPUT);
     Serial.begin(115200);
     setup_wifi();
-    client.setServer(mqtt_server, 1883);
+    client.setServer(mqtt_server, mqtt_port);
     client.setCallback(callback);
 }
 
@@ -55,16 +59,27 @@ void callback(char* topic, byte* message, unsigned int length) {
 
     // If a message is received on the topic esp32/output, you check if the message is either "on" or "off".
     // Changes the output state according to the message
-    if (String(topic) == "esp32/output") {
-        Serial.print("Changing output to ");
-        if(messageTemp == "on") {
-            Serial.println("on");
+    if (String(topic) == "tomada-inteligente/switch") {
+        if(messageTemp == "ligado") {
+            Serial.println("ligado");
+            client.publish("tomada/sub", "ligado");
+            digitalWrite(pinLed, HIGH);
+        } else {
+            Serial.println("desligado");
+            client.publish("tomada/sub", "desligado");
+            digitalWrite(pinLed, LOW);
         }
-        else if(messageTemp == "off") {
-            Serial.println("off");
-        }
+    } else if (String(topic) == "tomada/timer") {
+        Serial.println("ligado");
+        digitalWrite(pinLed, HIGH);
+        client.publish("tomada/sub", "ligado");
+        delay(5000);
+        Serial.println("desligado");
+        digitalWrite(pinLed, LOW);
+        client.publish("tomada/sub", "desligado");
     }
 }
+
 
 void reconnect() {
   // Loop until we're reconnected
@@ -74,7 +89,8 @@ void reconnect() {
     if (client.connect("ESP8266Client")) {
       Serial.println("connected");
       // Subscribe
-      client.subscribe("esp32/output");
+      client.subscribe("tomada-inteligente/switch");
+      client.subscribe("tomada/timer");
     } else {
       Serial.print("failed, rc=");
       Serial.print(client.state());
