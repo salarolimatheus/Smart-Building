@@ -7,16 +7,27 @@ const char* password = "qwerty1234";
 // Add your MQTT Broker IP address:
 const char* mqtt_server = "192.168.201.96";
 const int mqtt_port = 1883;
-----------------
-
-#define pinLed 2
-
+// ----------------
 WiFiClient espClient;
 PubSubClient client(espClient);
 long lastMsg = 0;
 
+enum Estado {
+    ON,
+    RELEASE,
+    OFF,
+    PUSH
+};
+
+#define TEMPO_PERIODO_TOUCH 40
+#define tempoMinimo     100
+#define tempoTouchLongo 400
+const int threshold = 30;
+
+volatile boolean touch0Enabled = true;
+volatile boolean touch2Enabled = true;
+
 void setup() {
-    pinMode(pinLed, OUTPUT);
     Serial.begin(115200);
     setup_wifi();
     client.setServer(mqtt_server, mqtt_port);
@@ -42,7 +53,25 @@ void setup_wifi() {
     Serial.println("IP address: ");
     Serial.println(WiFi.localIP());
 }
-
+void reconnect() {
+  // Loop until we're reconnected
+  while (!client.connected()) {
+    Serial.print("Attempting MQTT connection...");
+    // Attempt to connect
+    if (client.connect("ESP8266Client")) {
+      Serial.println("connected");
+      // Subscribe
+      client.subscribe("tomada/touch0_enable");
+      client.subscribe("tomada/touch2_enable");
+    } else {
+      Serial.print("failed, rc=");
+      Serial.print(client.state());
+      Serial.println(" try again in 5 seconds");
+      // Wait 5 seconds before retrying
+      delay(5000);
+    }
+  }
+}
 void callback(char* topic, byte* message, unsigned int length) {
     Serial.print("Message arrived on topic: ");
     Serial.print(topic);
@@ -55,61 +84,128 @@ void callback(char* topic, byte* message, unsigned int length) {
     }
     Serial.println();
 
-    // Feel free to add more if statements to control more GPIOs with MQTT
-
-    // If a message is received on the topic esp32/output, you check if the message is either "on" or "off".
-    // Changes the output state according to the message
-    if (String(topic) == "tomada-inteligente/switch") {
-        if(messageTemp == "ligado") {
-            Serial.println("ligado");
-            client.publish("tomada/sub", "ligado");
-            digitalWrite(pinLed, HIGH);
+    if (String(topic) == "tomada/touch0_enable") {
+        if(messageTemp == "0") {
+            Serial.println("touch0 desligado");
+            touch0Enabled = false;
         } else {
-            Serial.println("desligado");
-            client.publish("tomada/sub", "desligado");
-            digitalWrite(pinLed, LOW);
+            Serial.println("touch0 ligado");
+            touch0Enabled = true;
         }
-    } else if (String(topic) == "tomada/timer") {
-        Serial.println("ligado");
-        digitalWrite(pinLed, HIGH);
-        client.publish("tomada/sub", "ligado");
-        delay(5000);
-        Serial.println("desligado");
-        digitalWrite(pinLed, LOW);
-        client.publish("tomada/sub", "desligado");
+    } else if (String(topic) == "tomada/touch2_enable") {
+        if(messageTemp == "0") {
+            Serial.println("touch2 desligado");
+            touch2Enabled = false;
+        } else {
+            Serial.println("touch2 ligado");
+            touch2Enabled = true;
+        }
     }
-}
-
-
-void reconnect() {
-  // Loop until we're reconnected
-  while (!client.connected()) {
-    Serial.print("Attempting MQTT connection...");
-    // Attempt to connect
-    if (client.connect("ESP8266Client")) {
-      Serial.println("connected");
-      // Subscribe
-      client.subscribe("tomada-inteligente/switch");
-      client.subscribe("tomada/timer");
-    } else {
-      Serial.print("failed, rc=");
-      Serial.print(client.state());
-      Serial.println(" try again in 5 seconds");
-      // Wait 5 seconds before retrying
-      delay(5000);
-    }
-  }
 }
 
 void loop() {
+    static Estado estadoTouch0 = OFF;
+    static Estado estadoTouch2 = OFF;
+
+    static long periodoTarefaTouch0 = millis() + TEMPO_PERIODO_TOUCH;
+    static long periodoTarefaTouch2 = millis() + TEMPO_PERIODO_TOUCH;
+
+    static long tempoApertoTouch0 = 0;
+    static long lastTempoApertoTouch0 = 0;
+
+    static long tempoApertoTouch2 = 0;
+    static long lastTempoApertoTouch2 = 0;
+
     if (!client.connected()) {
         reconnect();
     }
     client.loop();
 
-    if (millis() - lastMsg > 5000) {
-        lastMsg = millis();
-        client.publish("esp32/temperature", "25");
-        client.publish("esp32/humidity", "88");
+    if ((millis() >= periodoTarefaTouch0) && touch0Enabled) {
+        uint32_t valorTouch0 = 0;
+        for (uint8_t i = 0; i < 4; i++) {
+            valorTouch0 = valorTouch0 + touchRead(T0);
+            delay(4);
+        }
+        valorTouch0 = (valorTouch0>>2);
+
+        switch (estadoTouch0) {
+            case OFF:
+                if(valorTouch0 < threshold) {
+                    estadoTouch0 = PUSH;
+                    client.publish("tomada/touch0_status", "push");
+                }
+            break;
+            case PUSH:
+                estadoTouch0 = ON;
+                tempoApertoTouch0 = millis();
+                client.publish("tomada/touch0_status", "on");
+            break;
+            case ON:
+                if(valorTouch0 >= threshold) {
+                    estadoTouch0 = RELEASE;
+                    client.publish("tomada/touch0_status", "release");
+                }
+            break;
+            case RELEASE:
+                estadoTouch0 = OFF;
+                lastTempoApertoTouch0 = millis() - tempoApertoTouch0;
+                client.publish("tomada/touch0_status", "off");
+            break;
+        }
+        periodoTarefaTouch0 = millis() + TEMPO_PERIODO_TOUCH;
+    }
+    if ((millis() >= periodoTarefaTouch2) && touch2Enabled) {
+        uint32_t valorTouch2 = 0;
+        for (uint8_t i = 0; i < 4; i++) {
+            valorTouch2 = valorTouch2 + touchRead(T2);
+            delay(4);
+        }
+        valorTouch2 = (valorTouch2>>2);
+
+        switch (estadoTouch2) {
+            case OFF:
+                if(valorTouch2 < threshold) {
+                    estadoTouch2 = PUSH;
+                    client.publish("tomada/touch2_status", "push");
+                }
+            break;
+            case PUSH:
+                estadoTouch2 = ON;
+                tempoApertoTouch2 = millis();
+                client.publish("tomada/touch2_status", "on");
+            break;
+            case ON:
+                if(valorTouch2 >= threshold) {
+                    estadoTouch2 = RELEASE;
+                    client.publish("tomada/touch2_status", "release");
+                }
+            break;
+            case RELEASE:
+                estadoTouch2 = OFF;
+                lastTempoApertoTouch2 = millis() - tempoApertoTouch2;
+                client.publish("tomada/touch2_status", "off");
+            break;
+        }
+        periodoTarefaTouch2 = millis() + TEMPO_PERIODO_TOUCH;
+    }
+
+    if (lastTempoApertoTouch0 > tempoMinimo) {
+        if (lastTempoApertoTouch0 > tempoTouchLongo) {
+            client.publish("tomada/touch0_click", "longo");
+        }
+        else {
+            client.publish("tomada/touch0_click", "curto");
+        }
+        lastTempoApertoTouch0 = 0;
+    }
+    if (lastTempoApertoTouch2 > tempoMinimo) {
+        if (lastTempoApertoTouch2 > tempoTouchLongo) {
+            client.publish("tomada/touch2_click", "longo");
+        }
+        else {
+            client.publish("tomada/touch2_click", "curto");
+        }
+        lastTempoApertoTouch2 = 0;
     }
 }
