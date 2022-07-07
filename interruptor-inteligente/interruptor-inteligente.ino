@@ -193,18 +193,22 @@ void loop() {
     if (lastTempoApertoTouch0 > tempoMinimo) {
         if (lastTempoApertoTouch0 > tempoTouchLongo) {
             client.publish("interruptor/touch0_click", "longo");
+            client.publish("tomada/rele1_status", "on");
         }
         else {
             client.publish("interruptor/touch0_click", "curto");
+            client.publish("tomada/rele1_status", "off");
         }
         lastTempoApertoTouch0 = 0;
     }
     if (lastTempoApertoTouch2 > tempoMinimo) {
         if (lastTempoApertoTouch2 > tempoTouchLongo) {
             client.publish("interruptor/touch2_click", "longo");
+            client.publish("tomada/rele2_status", "on");
         }
         else {
             client.publish("interruptor/touch2_click", "curto");
+            client.publish("tomada/rele2_status", "off");
         }
         lastTempoApertoTouch2 = 0;
     }

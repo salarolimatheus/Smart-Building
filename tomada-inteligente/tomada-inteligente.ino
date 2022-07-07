@@ -7,16 +7,24 @@ const char* password = "33d7fdeb6a";
 // Add your MQTT Broker IP address:
 const char* mqtt_server = "192.168.15.12";
 const int mqtt_port = 1883;
-----------------
+// ----------------
 
-#define pinLed 2
+#define pinRele1 12
+#define pinRele2 14
 
 WiFiClient espClient;
 PubSubClient client(espClient);
 long lastMsg = 0;
 
+volatile long tempoRele1 = 0;
+volatile long tempoRele2 = 0;
+volatile boolean tempoRele1Enabled = 0;
+volatile boolean tempoRele2Enabled = 0;
+
+//Initial config
 void setup() {
-    pinMode(pinLed, OUTPUT);
+    pinMode(pinRele1, OUTPUT);
+    pinMode(pinRele2, OUTPUT);
     Serial.begin(115200);
     setup_wifi();
     client.setServer(mqtt_server, mqtt_port);
@@ -55,46 +63,49 @@ void callback(char* topic, byte* message, unsigned int length) {
     }
     Serial.println();
 
+    String topico = String(topic);
     // Feel free to add more if statements to control more GPIOs with MQTT
-
-    switch (String(topic)) {
-        case "tomada/tomada0_status":
-            if(messageTemp == "on") {
-                Serial.println("ligado");
-                digitalWrite(pinLed, HIGH);
-            } else {
-                Serial.println("desligado");
-                digitalWrite(pinLed, LOW);
-            }
-            break;
-        case "tomada/tomada1_status":
-
-            break;
-        case "tomada/tomada0_timer":
-
-            break;
-        case "tomada/tomada1_timer":
-
-            break;
-    }
-    if (String(topic) == "tomada-inteligente/switch") {
-        if(messageTemp == "ligado") {
+    if (topico == "tomada/rele1_status") {
+        if(messageTemp == "on") {
             Serial.println("ligado");
-            client.publish("tomada/sub", "ligado");
-            digitalWrite(pinLed, HIGH);
+            digitalWrite(pinRele1, HIGH);
         } else {
             Serial.println("desligado");
-            client.publish("tomada/sub", "desligado");
-            digitalWrite(pinLed, LOW);
+            digitalWrite(pinRele1, LOW);
         }
-    } else if (String(topic) == "tomada/timer") {
-        Serial.println("ligado");
-        digitalWrite(pinLed, HIGH);
-        client.publish("tomada/sub", "ligado");
-        delay(5000);
-        Serial.println("desligado");
-        digitalWrite(pinLed, LOW);
-        client.publish("tomada/sub", "desligado");
+        tempoRele1Enabled = false;
+    } else if (topico == "tomada/rele2_status") {
+        if(messageTemp == "on") {
+            Serial.println("ligado");
+            digitalWrite(pinRele2, HIGH);
+        } else {
+            Serial.println("desligado");
+            digitalWrite(pinRele2, LOW);
+        }
+        tempoRele2Enabled = false;
+    } else if (topico == "tomada/rele1_timer") {
+        // "on,5000" => comando = on; tempo = 5000;
+        String comando = messageTemp.substring(0, messageTemp.indexOf(','));
+        tempoRele1 = millis() + messageTemp.substring(messageTemp.indexOf(',') + 1, messageTemp.length()).toInt();
+        tempoRele1Enabled = true;
+
+        if (comando == "ligado") {
+            digitalWrite(pinRele1, HIGH);
+            client.publish("tomada/rele1_restatus", "on");
+        } else {
+            digitalWrite(pinRele1, LOW);
+            client.publish("tomada/rele1_restatus", "off");
+        }
+    } else if (topico == "tomada/rele2_timer") {
+        String comando = messageTemp.substring(0, messageTemp.indexOf(','));
+        tempoRele2 = millis() + messageTemp.substring(messageTemp.indexOf(',') + 1, messageTemp.length()).toInt();
+        tempoRele2Enabled = true;
+
+        if (comando == "ligado") {
+            digitalWrite(pinRele2, HIGH);
+        } else {
+            digitalWrite(pinRele2, LOW);
+        }
     }
 }
 
@@ -106,8 +117,10 @@ void reconnect() {
     if (client.connect("ESP8266Client")) {
       Serial.println("connected");
       // Subscribe
-      client.subscribe("tomada-inteligente/switch");
-      client.subscribe("tomada/timer");
+      client.subscribe("tomada/rele1_status");
+      client.subscribe("tomada/rele2_status");
+      client.subscribe("tomada/rele1_timer");
+      client.subscribe("tomada/rele2_timer");
     } else {
       Serial.print("failed, rc=");
       Serial.print(client.state());
@@ -123,4 +136,29 @@ void loop() {
         reconnect();
     }
     client.loop();
+
+    if (tempoRele1Enabled) {
+        if (millis() >= tempoRele1) {
+            digitalWrite(pinRele1, !digitalRead(pinRele1));
+            if(digitalRead(pinRele1) == LOW) {
+                client.publish("tomada/rele1_restatus", "off");
+            } else {
+                client.publish("tomada/rele1_restatus", "on");
+            }
+            tempoRele1Enabled = false;
+        }
+    }
+
+    if (tempoRele2Enabled) {
+        if (millis() >= tempoRele2) {
+            digitalWrite(pinRele2, !digitalRead(pinRele2));
+            if(digitalRead(pinRele2) == LOW) {
+                client.publish("tomada/rele2_restatus", "off");
+            } else {
+                client.publish("tomada/rele2_restatus", "on");
+            }
+            tempoRele2Enabled = false;
+        }
+    }
+
 }
