@@ -195,11 +195,9 @@ void loop() {
             client.publish("interruptor/touch0_click", "longo");
             client.publish("tomada/rele1_status", "off");
             client.publish("tomada/rele1_restatus", "off");
-        }
-        else {
+        } else {
             client.publish("interruptor/touch0_click", "curto");
-            client.publish("tomada/rele1_status", "on");
-            client.publish("tomada/rele1_restatus", "on");
+            client.publish("tomada/rele1_toggle", "a");
         }
         lastTempoApertoTouch0 = 0;
     }
@@ -208,8 +206,7 @@ void loop() {
             client.publish("interruptor/touch2_click", "longo");
             client.publish("tomada/rele2_status", "off");
             client.publish("tomada/rele2_restatus", "off");
-        }
-        else {
+        } else {
             client.publish("interruptor/touch2_click", "curto");
             client.publish("tomada/rele2_status", "on");
             client.publish("tomada/rele2_restatus", "on");
