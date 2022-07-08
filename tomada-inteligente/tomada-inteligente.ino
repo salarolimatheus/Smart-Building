@@ -83,6 +83,16 @@ void callback(char* topic, byte* message, unsigned int length) {
             digitalWrite(pinRele2, LOW);
         }
         tempoRele2Enabled = false;
+      } else if (topico == "tomada/rele1_toggle") {
+              if(digitalRead(pinRele1) == HIGH){
+                client.publish("tomada/rele1_restatus", "off");
+                digitalWrite(pinRele1, LOW);
+              }
+              else{
+                client.publish("tomada/rele1_restatus", "on");
+                digitalWrite(pinRele1, HIGH);
+              }
+          tempoRele1Enabled = false;
     } else if (topico == "tomada/rele1_timer") {
         // "on,5000" => comando = on; tempo = 5000;
         String comando = messageTemp.substring(0, messageTemp.indexOf(','));
@@ -124,6 +134,7 @@ void reconnect() {
       client.subscribe("tomada/rele2_status");
       client.subscribe("tomada/rele1_timer");
       client.subscribe("tomada/rele2_timer");
+      client.subscribe("tomada/rele1_toggle");
     } else {
       Serial.print("failed, rc=");
       Serial.print(client.state());
