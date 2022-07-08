@@ -83,7 +83,6 @@ void callback(char* topic, byte* message, unsigned int length) {
             digitalWrite(pinRele2, LOW);
         }
         tempoRele2Enabled = false;
-        //
       } else if (topico == "tomada/rele1_toggle") {
               if(digitalRead(pinRele1) == HIGH){
                 client.publish("tomada/rele1_restatus", "off");
