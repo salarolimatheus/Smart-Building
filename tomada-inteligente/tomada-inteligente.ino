@@ -2,10 +2,10 @@
 #include "PubSubClient.h"
 
 // TROCAR ESSAS LINHAS AQUI ---------
-const char* ssid = "Meca";
-const char* password = "33d7fdeb6a";
+const char* ssid = "Hakuna Matata";
+const char* password = "qwerty1234";
 // Add your MQTT Broker IP address:
-const char* mqtt_server = "192.168.15.12";
+const char* mqtt_server = "192.168.194.96";
 const int mqtt_port = 1883;
 // ----------------
 
@@ -103,8 +103,11 @@ void callback(char* topic, byte* message, unsigned int length) {
 
         if (comando == "ligado") {
             digitalWrite(pinRele2, HIGH);
+            client.publish("tomada/rele2_restatus", "on");
         } else {
             digitalWrite(pinRele2, LOW);
+            client.publish("tomada/rele2_restatus", "off");
+
         }
     }
 }
@@ -114,7 +117,7 @@ void reconnect() {
   while (!client.connected()) {
     Serial.print("Attempting MQTT connection...");
     // Attempt to connect
-    if (client.connect("ESP8266Client")) {
+    if (client.connect("ESP32_Tomada")) {
       Serial.println("connected");
       // Subscribe
       client.subscribe("tomada/rele1_status");
