@@ -2,10 +2,10 @@
 #include "PubSubClient.h"
 
 // TROCAR ESSAS LINHAS AQUI ---------
-const char* ssid = "Meca";
-const char* password = "33d7fdeb6a";
+const char* ssid = "Hakuna Matata";
+const char* password = "qwerty1234";
 // Add your MQTT Broker IP address:
-const char* mqtt_server = "192.168.15.12";
+const char* mqtt_server = "192.168.194.96";
 const int mqtt_port = 1883;
 // ----------------
 WiFiClient espClient;
@@ -193,22 +193,26 @@ void loop() {
     if (lastTempoApertoTouch0 > tempoMinimo) {
         if (lastTempoApertoTouch0 > tempoTouchLongo) {
             client.publish("interruptor/touch0_click", "longo");
-            client.publish("tomada/rele1_status", "on");
+            client.publish("tomada/rele1_status", "off");
+            client.publish("tomada/rele1_restatus", "off");
         }
         else {
             client.publish("interruptor/touch0_click", "curto");
-            client.publish("tomada/rele1_status", "off");
+            client.publish("tomada/rele1_status", "on");
+            client.publish("tomada/rele1_restatus", "on");
         }
         lastTempoApertoTouch0 = 0;
     }
     if (lastTempoApertoTouch2 > tempoMinimo) {
         if (lastTempoApertoTouch2 > tempoTouchLongo) {
             client.publish("interruptor/touch2_click", "longo");
-            client.publish("tomada/rele2_status", "on");
+            client.publish("tomada/rele2_status", "off");
+            client.publish("tomada/rele2_restatus", "off");
         }
         else {
             client.publish("interruptor/touch2_click", "curto");
-            client.publish("tomada/rele2_status", "off");
+            client.publish("tomada/rele2_status", "on");
+            client.publish("tomada/rele2_restatus", "on");
         }
         lastTempoApertoTouch2 = 0;
     }
