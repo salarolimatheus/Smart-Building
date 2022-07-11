@@ -1,0 +1,1 @@
+scp -r D:\Documentos\GitHub\Smart-Building\raspberry\docker-compose pi@10.0.0.100:/home/pi
