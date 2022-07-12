@@ -63,7 +63,7 @@ services:
     networks:
       - "sb-network"
     volumes:
-      - mosquitto-conf:/mosquitto/config
+      - mosquitto-config:/mosquitto/config
 
   homeassistant:
     image: "ghcr.io/home-assistant/home-assistant:stable"
@@ -75,13 +75,13 @@ services:
     networks:
       - "sb-network"
     volumes:
-      - /home/user/homeassistant:/config
-      - /media/:/media
+      - homeassistant-config:/config
       - /etc/localtime:/etc/localtime:ro
 
 volumes:
+  homeassistant-config:
   node-red-data:
-  mosquitto-conf:
+  mosquitto-config:
   postgres-data:
     driver: local
 
