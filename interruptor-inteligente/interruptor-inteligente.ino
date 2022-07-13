@@ -2,11 +2,11 @@
 #include "PubSubClient.h"
 
 // TROCAR ESSAS LINHAS AQUI ---------
-const char* ssid = "Hakuna Matata";
-const char* password = "qwerty1234";
+const char* ssid = "TUG";
+const char* password = "7500015000";
 // Add your MQTT Broker IP address:
-const char* mqtt_server = "192.168.194.96";
-const int mqtt_port = 1883;
+const char* mqtt_server = "sb-docker.duckdns.org";
+const int mqtt_port = 49000;
 // ----------------
 WiFiClient espClient;
 PubSubClient client(espClient);
@@ -58,7 +58,7 @@ void reconnect() {
   while (!client.connected()) {
     Serial.print("Attempting MQTT connection...");
     // Attempt to connect
-    if (client.connect("ESP8266Client")) {
+    if (client.connect("ESP32-interruptor")) {
       Serial.println("connected");
       // Subscribe
       client.subscribe("interruptor/touch0_enable");
