@@ -723,7 +723,7 @@ PubSubClient& PubSubClient::setCallback(MQTT_CALLBACK_SIGNATURE) {
     return *this;
 }
 
-PubSubClient& PubSubClient::setClient(Client& client){
+PubSubClient& PubSubClient::setClient(Client& client) {
     this->_client = &client;
     return *this;
 }
