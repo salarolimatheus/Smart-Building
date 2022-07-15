@@ -16,6 +16,10 @@ struct TouchStatus {
     long tempoCliqueDois;
     long tempoTransicao;
     uint8_t valorCapacitancia;
-    TipoClique clique;
+    TipoClique clique = SEM_CLIQUE;
 };
-#define TAMANHO_TOUCHSTATUS 14
+
+struct TouchConfig {
+    bool touch0Enabled = true;
+    bool touch2Enabled = true;
+};

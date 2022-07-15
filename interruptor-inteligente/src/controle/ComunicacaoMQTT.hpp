@@ -8,7 +8,7 @@
 
 void ConfiguraMQTT();
 
-void processarMensagensRecebidasDoMQTT();
+void processarMensagensRecebidasDoMQTT(TouchConfig* config);
 
 void conectarAoBrokerMQTT();
 void callback(char* topic, byte* message, unsigned int length);

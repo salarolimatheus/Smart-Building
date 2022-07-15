@@ -7,7 +7,7 @@
 #include "src/controle/GestaoBotoesCapacitivos.hpp" //Camada de Controle - Gerencia sistema botoes capacitivos
 
 MicroOS sistema;
-TouchStatus touch0, touch2;
+
 
 void setup() {
     sistema = MicroOS();
@@ -15,7 +15,6 @@ void setup() {
 
     ConfiguraWifi();
     ConfiguraMQTT();
-    ConfiguraTouchs(&touch0, &touch2);
 
     sistema.addTarefa(TAREFA_TOUCH_0, TAREFA_SINC, 10, MASK_TAREFA_TOUCH_0, MASK_TAREFA_TOUCH_0);
     sistema.addTarefa(TAREFA_TOUCH_2, TAREFA_SINC, 10, MASK_TAREFA_TOUCH_2, MASK_TAREFA_TOUCH_2);
@@ -27,8 +26,23 @@ void setup() {
 }
 
 void loop() {
+    static TouchStatus touch0, touch2;
+    static TouchConfig touchConfig;
+
     if(sistema.verificar(TAREFA_MQTT_REC_MSG_RECONECT)) {
-        processarMensagensRecebidasDoMQTT();
+        processarMensagensRecebidasDoMQTT(&touchConfig);
+
+        if (touchConfig.touch0Enabled == false) {
+            sistema.clearEvent(TAREFA_TOUCH_0, EVENTO_0);
+        } else {
+            sistema.setEvent(TAREFA_TOUCH_0, EVENTO_0);
+        }
+
+        if (touchConfig.touch2Enabled == false) {
+            sistema.clearEvent(TAREFA_TOUCH_2, EVENTO_0);
+        } else {
+            sistema.setEvent(TAREFA_TOUCH_2, EVENTO_0);
+        }
     }
 
     if(sistema.verificar(TAREFA_TOUCH_0)) {
@@ -39,10 +53,8 @@ void loop() {
     }
 
     if(sistema.verificar(TAREFA_MQTT_ENVIA_TOUCH_0)) {
-        DBG_TIQUE("TAREFA_MQTT_ENVIA_TOUCH_0")
         EnviaDadosTouch0PorMQTT(&touch0);
         sistema.clearAllEvents(TAREFA_MQTT_ENVIA_TOUCH_0);
-        DBG_TAQUE()
     }
 
     if(sistema.verificar(TAREFA_TOUCH_2)) {
@@ -53,9 +65,7 @@ void loop() {
     }
 
     if(sistema.verificar(TAREFA_MQTT_ENVIA_TOUCH_2)) {
-        DBG_TIQUE("TAREFA_MQTT_ENVIA_TOUCH_2")
         EnviaDadosTouch2PorMQTT(&touch2);
         sistema.clearAllEvents(TAREFA_MQTT_ENVIA_TOUCH_2);
-        DBG_TAQUE()
     }
 }
