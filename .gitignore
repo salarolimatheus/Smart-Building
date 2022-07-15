@@ -9,3 +9,5 @@ Teste/interruptor-inteligente/interruptor-inteligente.ino
 Teste/SerialToSerialBT-RIC/SerialToSerialBT-RIC.ino
 
 raspberry/sb-docker/credentials.txt
+
+interruptor-inteligente/chaves/Wifi-keys.h
