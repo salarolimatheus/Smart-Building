@@ -1,216 +1,71 @@
-#include "src/Wifi/Wifi.h"
-#include "PubSubClient.h"
+#include "src/MicroOS.hpp"                          //Sistema de gerenciamento de tarefas
+#include "src/Pacotes.hpp"                          //Sistema de gerenciamento de Pacotes
+#include "src/Debug.hpp"                            //Biblioteca para Testes
 
-// TROCAR ESSAS LINHAS AQUI ---------
-const char* ssid = "TUG";
-const char* password = "7500015000";
-// Add your MQTT Broker IP address:
-const char* mqtt_server = "sb-docker.duckdns.org";
-const int mqtt_port = 49000;
-// ----------------
-WiFiClient espClient;
-PubSubClient client(espClient);
-long lastMsg = 0;
+#include "src/controle/ConexaoWifi.hpp"             //Camada de Controle - Conexao com uma rede Wifi
+#include "src/controle/ComunicacaoMQTT.hpp"         //Camada de Controle - Envio/Recebimento de dados via MQTT
+#include "src/controle/GestaoBotoesCapacitivos.hpp" //Camada de Controle - Gerencia sistema botoes capacitivos
 
-enum Estado {
-    ON,
-    RELEASE,
-    OFF,
-    PUSH
-};
+MicroOS sistema;
 
-#define TEMPO_PERIODO_TOUCH 40
-#define tempoMinimo     100
-#define tempoTouchLongo 400
-const int threshold = 30;
-
-volatile boolean touch0Enabled = true;
-volatile boolean touch2Enabled = true;
 
 void setup() {
-    Serial.begin(115200);
-    setup_wifi();
-    client.setServer(mqtt_server, mqtt_port);
-    client.setCallback(callback);
-}
+    sistema = MicroOS();
+    DBG_BEGIN(DEBUG_BAUD_RATE)
 
-void setup_wifi() {
-    delay(10);
-    // We start by connecting to a WiFi network
-    Serial.println();
-    Serial.print("Connecting to ");
-    Serial.println(ssid);
+    ConfiguraWifi();
+    ConfiguraMQTT();
 
-    WiFi.begin(ssid, password);
+    sistema.addTarefa(TAREFA_TOUCH_0, TAREFA_SINC, 10, MASK_TAREFA_TOUCH_0, MASK_TAREFA_TOUCH_0);
+    sistema.addTarefa(TAREFA_TOUCH_2, TAREFA_SINC, 10, MASK_TAREFA_TOUCH_2, MASK_TAREFA_TOUCH_2);
+    sistema.addTarefa(TAREFA_MQTT_REC_MSG_RECONECT, TAREFA_SINC, 50, MASK_TAREFA_MQTT_REC_MSG_RECONECT);
+    sistema.addTarefa(TAREFA_MQTT_ENVIA_TOUCH_0, TAREFA_ASSINC, 0, MASK_TAREFA_MQTT_ENVIA_TOUCH_0);
+    sistema.addTarefa(TAREFA_MQTT_ENVIA_TOUCH_2, TAREFA_ASSINC, 0, MASK_TAREFA_MQTT_ENVIA_TOUCH_2);
 
-    while (WiFi.status() != WL_CONNECTED) {
-        delay(500);
-        Serial.print(".");
-    }
-
-    Serial.println("");
-    Serial.println("WiFi connected");
-    Serial.println("IP address: ");
-    Serial.println(WiFi.localIP());
-}
-void reconnect() {
-  // Loop until we're reconnected
-  while (!client.connected()) {
-    Serial.print("Attempting MQTT connection...");
-    // Attempt to connect
-    if (client.connect("ESP32-interruptor")) {
-      Serial.println("connected");
-      // Subscribe
-      client.subscribe("interruptor/touch0_enable");
-      client.subscribe("interruptor/touch2_enable");
-    } else {
-      Serial.print("failed, rc=");
-      Serial.print(client.state());
-      Serial.println(" try again in 5 seconds");
-      // Wait 5 seconds before retrying
-      delay(5000);
-    }
-  }
-}
-void callback(char* topic, byte* message, unsigned int length) {
-    Serial.print("Message arrived on topic: ");
-    Serial.print(topic);
-    Serial.print(". Message: ");
-    String messageTemp;
-
-    for (int i = 0; i < length; i++) {
-        Serial.print((char)message[i]);
-        messageTemp += (char)message[i];
-    }
-    Serial.println();
-
-    if (String(topic) == "interruptor/touch0_enable") {
-        if(messageTemp == "0") {
-            Serial.println("touch0 desligado");
-            touch0Enabled = false;
-        } else {
-            Serial.println("touch0 ligado");
-            touch0Enabled = true;
-        }
-    } else if (String(topic) == "interruptor/touch2_enable") {
-        if(messageTemp == "0") {
-            Serial.println("touch2 desligado");
-            touch2Enabled = false;
-        } else {
-            Serial.println("touch2 ligado");
-            touch2Enabled = true;
-        }
-    }
+    sistema.iniciar();
 }
 
 void loop() {
-    static Estado estadoTouch0 = OFF;
-    static Estado estadoTouch2 = OFF;
+    static TouchStatus touch0, touch2;
+    static TouchConfig touchConfig;
 
-    static long periodoTarefaTouch0 = millis() + TEMPO_PERIODO_TOUCH;
-    static long periodoTarefaTouch2 = millis() + TEMPO_PERIODO_TOUCH;
+    if(sistema.verificar(TAREFA_MQTT_REC_MSG_RECONECT)) {
+        processarMensagensRecebidasDoMQTT(&touchConfig);
 
-    static long tempoApertoTouch0 = 0;
-    static long lastTempoApertoTouch0 = 0;
-
-    static long tempoApertoTouch2 = 0;
-    static long lastTempoApertoTouch2 = 0;
-
-    if (!client.connected()) {
-        reconnect();
-    }
-    client.loop();
-
-    if ((millis() >= periodoTarefaTouch0) && touch0Enabled) {
-        uint32_t valorTouch0 = 0;
-        for (uint8_t i = 0; i < 4; i++) {
-            valorTouch0 = valorTouch0 + touchRead(T0);
-            delay(4);
-        }
-        valorTouch0 = (valorTouch0>>2);
-
-        switch (estadoTouch0) {
-            case OFF:
-                if(valorTouch0 < threshold) {
-                    estadoTouch0 = PUSH;
-                    client.publish("interruptor/touch0_status", "push");
-                }
-            break;
-            case PUSH:
-                estadoTouch0 = ON;
-                tempoApertoTouch0 = millis();
-                client.publish("interruptor/touch0_status", "on");
-            break;
-            case ON:
-                if(valorTouch0 >= threshold) {
-                    estadoTouch0 = RELEASE;
-                    client.publish("interruptor/touch0_status", "release");
-                }
-            break;
-            case RELEASE:
-                estadoTouch0 = OFF;
-                lastTempoApertoTouch0 = millis() - tempoApertoTouch0;
-                client.publish("interruptor/touch0_status", "off");
-            break;
-        }
-        periodoTarefaTouch0 = millis() + TEMPO_PERIODO_TOUCH;
-    }
-    if ((millis() >= periodoTarefaTouch2) && touch2Enabled) {
-        uint32_t valorTouch2 = 0;
-        for (uint8_t i = 0; i < 4; i++) {
-            valorTouch2 = valorTouch2 + touchRead(T2);
-            delay(4);
-        }
-        valorTouch2 = (valorTouch2>>2);
-
-        switch (estadoTouch2) {
-            case OFF:
-                if(valorTouch2 < threshold) {
-                    estadoTouch2 = PUSH;
-                    client.publish("interruptor/touch2_status", "push");
-                }
-            break;
-            case PUSH:
-                estadoTouch2 = ON;
-                tempoApertoTouch2 = millis();
-                client.publish("interruptor/touch2_status", "on");
-            break;
-            case ON:
-                if(valorTouch2 >= threshold) {
-                    estadoTouch2 = RELEASE;
-                    client.publish("interruptor/touch2_status", "release");
-                }
-            break;
-            case RELEASE:
-                estadoTouch2 = OFF;
-                lastTempoApertoTouch2 = millis() - tempoApertoTouch2;
-                client.publish("interruptor/touch2_status", "off");
-            break;
-        }
-        periodoTarefaTouch2 = millis() + TEMPO_PERIODO_TOUCH;
-    }
-
-    if (lastTempoApertoTouch0 > tempoMinimo) {
-        if (lastTempoApertoTouch0 > tempoTouchLongo) {
-            client.publish("interruptor/touch0_click", "longo");
-            client.publish("tomada/rele1_status", "off");
-            client.publish("tomada/rele1_restatus", "off");
+        if (touchConfig.touch0Enabled == false) {
+            sistema.clearEvent(TAREFA_TOUCH_0, EVENTO_0);
         } else {
-            client.publish("interruptor/touch0_click", "curto");
-            client.publish("tomada/rele1_toggle", "a");
+            sistema.setEvent(TAREFA_TOUCH_0, EVENTO_0);
         }
-        lastTempoApertoTouch0 = 0;
-    }
-    if (lastTempoApertoTouch2 > tempoMinimo) {
-        if (lastTempoApertoTouch2 > tempoTouchLongo) {
-            client.publish("interruptor/touch2_click", "longo");
-            client.publish("tomada/rele2_status", "off");
-            client.publish("tomada/rele2_restatus", "off");
+
+        if (touchConfig.touch2Enabled == false) {
+            sistema.clearEvent(TAREFA_TOUCH_2, EVENTO_0);
         } else {
-            client.publish("interruptor/touch2_click", "curto");
-            client.publish("tomada/rele2_status", "on");
-            client.publish("tomada/rele2_restatus", "on");
+            sistema.setEvent(TAREFA_TOUCH_2, EVENTO_0);
         }
-        lastTempoApertoTouch2 = 0;
+    }
+
+    if(sistema.verificar(TAREFA_TOUCH_0)) {
+        bool dadoCompleto = GestaoBotaoTouch0(&touch0);
+        if (dadoCompleto == true) {
+            sistema.setEvent(TAREFA_MQTT_ENVIA_TOUCH_0, EVENTO_0);
+        }
+    }
+
+    if(sistema.verificar(TAREFA_MQTT_ENVIA_TOUCH_0)) {
+        EnviaDadosTouch0PorMQTT(&touch0);
+        sistema.clearAllEvents(TAREFA_MQTT_ENVIA_TOUCH_0);
+    }
+
+    if(sistema.verificar(TAREFA_TOUCH_2)) {
+        bool dadoCompleto = GestaoBotaoTouch2(&touch2);
+        if (dadoCompleto == true) {
+            sistema.setEvent(TAREFA_MQTT_ENVIA_TOUCH_2, EVENTO_0);
+        }
+    }
+
+    if(sistema.verificar(TAREFA_MQTT_ENVIA_TOUCH_2)) {
+        EnviaDadosTouch2PorMQTT(&touch2);
+        sistema.clearAllEvents(TAREFA_MQTT_ENVIA_TOUCH_2);
     }
 }
