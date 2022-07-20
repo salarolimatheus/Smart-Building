@@ -2,11 +2,6 @@
 
 #include "../../interface/constantes-botoes-capacitivos.h"
 
-void ConfiguraTouchs(TouchStatus* touch0, TouchStatus* touch2){
-    touch0->clique = SEM_CLIQUE;
-    touch2->clique = SEM_CLIQUE;
-}
-
 bool GestaoBotaoTouch0 (TouchStatus* touch) {
     static Estado estadoTouch = OFF;
     static long tempoNoPUSH = micros();
