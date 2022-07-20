@@ -9,11 +9,11 @@ void ConfiguraTouchs(TouchStatus* touch0, TouchStatus* touch2){
 
 bool GestaoBotaoTouch0 (TouchStatus* touch) {
     static Estado estadoTouch = OFF;
-    static long tempoNoPUSH = millis();
-    static long tempoNoRELEASE = millis();
+    static long tempoNoPUSH = micros();
+    static long tempoNoRELEASE = micros();
 
     static long tempoClique = 0;
-    static long tempoEsperaTouch = TEMPO_TRANSICAO_MS;
+    static long tempoEsperaTouch = TEMPO_TRANSICAO_US;
 
     uint32_t valorTouch = 0;
     for (uint8_t i = 0; i < 4; i++) {
@@ -25,8 +25,8 @@ bool GestaoBotaoTouch0 (TouchStatus* touch) {
     switch (estadoTouch) {
         case OFF:
             if(touch->clique == CLIQUE_SIMPLES_WAIT) {
-                tempoEsperaTouch = millis() - tempoNoRELEASE;
-                if (tempoEsperaTouch > TEMPO_TRANSICAO_MS) {
+                tempoEsperaTouch = micros() - tempoNoRELEASE;
+                if (tempoEsperaTouch > TEMPO_TRANSICAO_US) {
                     touch->clique = CLIQUE_SIMPLES;
                     return true;
                 }
@@ -34,11 +34,11 @@ bool GestaoBotaoTouch0 (TouchStatus* touch) {
 
             if(valorTouch < LIMIAR_TOUCH) {
                 estadoTouch = ON;
-                tempoNoPUSH = millis();
+                tempoNoPUSH = micros();
                 touch->valorCapacitancia = valorTouch;
                 tempoEsperaTouch = tempoNoPUSH - tempoNoRELEASE;
 
-                if (tempoEsperaTouch >= TEMPO_TRANSICAO_MS) {
+                if (tempoEsperaTouch >= TEMPO_TRANSICAO_US) {
                     touch->clique = CLIQUE_SIMPLES;
                 } else {
                     touch->clique = CLIQUE_DUPLO;
@@ -49,7 +49,7 @@ bool GestaoBotaoTouch0 (TouchStatus* touch) {
             if(valorTouch >= LIMIAR_TOUCH) {
                 estadoTouch = OFF;
 
-                tempoNoRELEASE = millis();
+                tempoNoRELEASE = micros();
                 tempoClique = tempoNoRELEASE - tempoNoPUSH;
 
                 if (touch->clique == CLIQUE_DUPLO) {
@@ -57,11 +57,11 @@ bool GestaoBotaoTouch0 (TouchStatus* touch) {
                     touch->tempoTransicao = tempoEsperaTouch;
                     return true;
                 } else {
-                    if (tempoClique >= TEMPO_LIMITE_MS) {
+                    if (tempoClique >= TEMPO_LIMITE_US) {
                         touch->tempoCliqueUm = tempoClique;
                         touch->clique = CLIQUE_LONGO;
                         return true;
-                    } else if (tempoClique > TEMPO_MINIMO_MS) {
+                    } else if (tempoClique > TEMPO_MINIMO_US) {
                         touch->tempoCliqueUm = tempoClique;
                         touch->clique = CLIQUE_SIMPLES_WAIT;
                     }
@@ -74,11 +74,11 @@ bool GestaoBotaoTouch0 (TouchStatus* touch) {
 
 bool GestaoBotaoTouch2 (TouchStatus* touch) {
     static Estado estadoTouch = OFF;
-    static long tempoNoPUSH = millis();
-    static long tempoNoRELEASE = millis();
+    static long tempoNoPUSH = micros();
+    static long tempoNoRELEASE = micros();
 
     static long tempoClique = 0;
-    static long tempoEsperaTouch = TEMPO_TRANSICAO_MS;
+    static long tempoEsperaTouch = TEMPO_TRANSICAO_US;
 
     uint32_t valorTouch = 0;
     for (uint8_t i = 0; i < 4; i++) {
@@ -90,8 +90,8 @@ bool GestaoBotaoTouch2 (TouchStatus* touch) {
     switch (estadoTouch) {
         case OFF:
             if(touch->clique == CLIQUE_SIMPLES_WAIT) {
-                tempoEsperaTouch = millis() - tempoNoRELEASE;
-                if (tempoEsperaTouch > TEMPO_TRANSICAO_MS) {
+                tempoEsperaTouch = micros() - tempoNoRELEASE;
+                if (tempoEsperaTouch > TEMPO_TRANSICAO_US) {
                     touch->clique = CLIQUE_SIMPLES;
                     return true;
                 }
@@ -99,11 +99,11 @@ bool GestaoBotaoTouch2 (TouchStatus* touch) {
 
             if(valorTouch < LIMIAR_TOUCH) {
                 estadoTouch = ON;
-                tempoNoPUSH = millis();
+                tempoNoPUSH = micros();
                 touch->valorCapacitancia = valorTouch;
                 tempoEsperaTouch = tempoNoPUSH - tempoNoRELEASE;
 
-                if (tempoEsperaTouch >= TEMPO_TRANSICAO_MS) {
+                if (tempoEsperaTouch >= TEMPO_TRANSICAO_US) {
                     touch->clique = CLIQUE_SIMPLES;
                 } else {
                     touch->clique = CLIQUE_DUPLO;
@@ -114,7 +114,7 @@ bool GestaoBotaoTouch2 (TouchStatus* touch) {
             if(valorTouch >= LIMIAR_TOUCH) {
                 estadoTouch = OFF;
 
-                tempoNoRELEASE = millis();
+                tempoNoRELEASE = micros();
                 tempoClique = tempoNoRELEASE - tempoNoPUSH;
 
                 if (touch->clique == CLIQUE_DUPLO) {
@@ -122,11 +122,11 @@ bool GestaoBotaoTouch2 (TouchStatus* touch) {
                     touch->tempoTransicao = tempoEsperaTouch;
                     return true;
                 } else {
-                    if (tempoClique >= TEMPO_LIMITE_MS) {
+                    if (tempoClique >= TEMPO_LIMITE_US) {
                         touch->tempoCliqueUm = tempoClique;
                         touch->clique = CLIQUE_LONGO;
                         return true;
-                    } else if (tempoClique > TEMPO_MINIMO_MS) {
+                    } else if (tempoClique > TEMPO_MINIMO_US) {
                         touch->tempoCliqueUm = tempoClique;
                         touch->clique = CLIQUE_SIMPLES_WAIT;
                     }

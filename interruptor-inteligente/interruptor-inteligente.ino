@@ -8,7 +8,6 @@
 
 MicroOS sistema;
 
-
 void setup() {
     sistema = MicroOS();
     DBG_BEGIN(DEBUG_BAUD_RATE)
@@ -16,8 +15,8 @@ void setup() {
     ConfiguraWifi();
     ConfiguraMQTT();
 
-    sistema.addTarefa(TAREFA_TOUCH_0, TAREFA_SINC, 10, MASK_TAREFA_TOUCH_0, MASK_TAREFA_TOUCH_0);
-    sistema.addTarefa(TAREFA_TOUCH_2, TAREFA_SINC, 10, MASK_TAREFA_TOUCH_2, MASK_TAREFA_TOUCH_2);
+    sistema.addTarefa(TAREFA_TOUCH_0, TAREFA_SINC, 6, MASK_TAREFA_TOUCH_0, MASK_TAREFA_TOUCH_0);
+    sistema.addTarefa(TAREFA_TOUCH_2, TAREFA_SINC, 6, MASK_TAREFA_TOUCH_2, MASK_TAREFA_TOUCH_2);
     sistema.addTarefa(TAREFA_MQTT_REC_MSG_RECONECT, TAREFA_SINC, 50, MASK_TAREFA_MQTT_REC_MSG_RECONECT);
     sistema.addTarefa(TAREFA_MQTT_ENVIA_TOUCH_0, TAREFA_ASSINC, 0, MASK_TAREFA_MQTT_ENVIA_TOUCH_0);
     sistema.addTarefa(TAREFA_MQTT_ENVIA_TOUCH_2, TAREFA_ASSINC, 0, MASK_TAREFA_MQTT_ENVIA_TOUCH_2);
@@ -31,7 +30,6 @@ void loop() {
 
     if(sistema.verificar(TAREFA_MQTT_REC_MSG_RECONECT)) {
         processarMensagensRecebidasDoMQTT(&touchConfig);
-
         if (touchConfig.touch0Enabled == false) {
             sistema.clearEvent(TAREFA_TOUCH_0, EVENTO_0);
         } else {
