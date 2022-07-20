@@ -82,6 +82,12 @@ void EnviaDadosTouch0PorMQTT(TouchStatus* touch) {
     char payload[sizeof(TouchStatus)];
     memcpy(payload, touch, sizeof(TouchStatus));
     mqttClient.publish(TOPICO_TOUCH0, (byte*)payload, sizeof(TouchStatus));
+    if (touch->clique == CLIQUE_SIMPLES) {
+    mqttClient.publish("tomada/rele1_restatus", "on");
+  }
+  else if (touch->clique == CLIQUE_LONGO){
+    mqttClient.publish("tomada/rele1_restatus", "off");
+  }
     touch->clique = SEM_CLIQUE;
 }
 
@@ -89,5 +95,11 @@ void EnviaDadosTouch2PorMQTT(TouchStatus* touch) {
     char payload[sizeof(TouchStatus)];
     memcpy(payload, touch, sizeof(TouchStatus));
     mqttClient.publish(TOPICO_TOUCH2, (byte*)payload, sizeof(TouchStatus));
+    if (touch->clique == CLIQUE_SIMPLES) {
+    mqttClient.publish("tomada/rele2_restatus", "on");
+  }
+  else if (touch->clique == CLIQUE_LONGO){
+    mqttClient.publish("tomada/rele2_restatus", "off");
+  }
     touch->clique = SEM_CLIQUE;
 }
