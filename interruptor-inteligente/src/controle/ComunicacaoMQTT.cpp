@@ -32,11 +32,7 @@ void conectarAoBrokerMQTT() {
         if (mqttClient.connect(MQTT_CLIENT)) {
             DBG_PRINTLN("[MQTT] contectado")
             // Subscribe
-            DBG_PRINTLN("[MQTT] subscricoes: ")
-            mqttClient.subscribe("interruptor/touch0_enable");
-            DBG_PRINTLN("[MQTT] topico: interruptor/touch0_enable")
-            mqttClient.subscribe("interruptor/touch2_enable");
-            DBG_PRINTLN("[MQTT] topico: interruptor/touch2_enable")
+            subscricaoAosTopicosMQTT();
         } else {
             DBG_PRINT(" falhou, rc=")
             DBG_PRINT(mqttClient.state())
@@ -44,6 +40,14 @@ void conectarAoBrokerMQTT() {
             delay(500);
         }
     }
+}
+
+void subscricaoAosTopicosMQTT() {
+    DBG_PRINTLN("[MQTT] subscricoes: ")
+    mqttClient.subscribe(TOPICO_ENABLE_TOUCH0);
+    DBG_PRINTLN("[MQTT] topico: interruptor/touch0_enable")
+    mqttClient.subscribe(TOPICO_ENABLE_TOUCH2);
+    DBG_PRINTLN("[MQTT] topico: interruptor/touch2_enable")
 }
 
 void callback(char* topic, byte* message, unsigned int length) {
@@ -58,7 +62,9 @@ void callback(char* topic, byte* message, unsigned int length) {
     }
     DBG_PRINTLN()
 
-    if (String(topic) == TOPICO_ENABLE_TOUCH0) {
+    String topico = String(topic);
+
+    if (topico == TOPICO_ENABLE_TOUCH0) {
         if(messageTemp == "0") {
             DBG_PRINTLN("[MQTT] touch0 desligado")
             touch0Enabled = false;
@@ -66,7 +72,7 @@ void callback(char* topic, byte* message, unsigned int length) {
             DBG_PRINTLN("[MQTT] touch0 ligado")
             touch0Enabled = true;
         }
-    } else if (String(topic) == TOPICO_ENABLE_TOUCH2) {
+    } else if (topico == TOPICO_ENABLE_TOUCH2) {
         if(messageTemp == "0") {
             DBG_PRINTLN("[MQTT] touch2 desligado")
             touch2Enabled = false;
