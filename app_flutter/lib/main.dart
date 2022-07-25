@@ -29,7 +29,7 @@ class TelaPrincipal extends StatefulWidget {
 }
 
 class _TelaPrincipalState extends State<TelaPrincipal> {
-  int _selectedIndex = 0;
+  int _selectedIndex = 2;
 
   static const List<Widget> _widgetOptions = <Widget>[
     conteudoPaginaAdicionarObjeto(),
