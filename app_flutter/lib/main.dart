@@ -29,7 +29,7 @@ class TelaPrincipal extends StatefulWidget {
 }
 
 class _TelaPrincipalState extends State<TelaPrincipal> {
-  int _selectedIndex = 2;
+  int _selectedIndex = 0;
 
   static const List<Widget> _widgetOptions = <Widget>[
     conteudoPaginaAdicionarObjeto(),
@@ -46,6 +46,7 @@ class _TelaPrincipalState extends State<TelaPrincipal> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      backgroundColor: Colors.white,
       body: Center(
         child: _widgetOptions.elementAt(_selectedIndex),
       ),
