@@ -1,11 +1,16 @@
+import 'dart:io';
+
 import 'package:flutter/material.dart';
+import 'package:mqtt_client/mqtt_client.dart';
+import 'package:mqtt_client/mqtt_server_client.dart';
 
 class conteudoPaginaConfiguracoes extends StatelessWidget {
-  const conteudoPaginaConfiguracoes({Key? key}) : super(key: key);
+  conteudoPaginaConfiguracoes(this.mqttClient, {Key? key}) : super(key: key);
 
-  static String mqttEndereco = "sb-docker.duckdns.org";
-  static String mqttPorta = "1883";
+  static String mqttEndereco = "10.0.0.100";
+  static int mqttPorta = 1883;
   static String mqttClientID = "mobile_client_id";
+  MqttServerClient mqttClient;
 
   @override
   Widget build(BuildContext context) {
@@ -52,10 +57,12 @@ class conteudoPaginaConfiguracoes extends StatelessWidget {
                   ),
                   const Padding(padding: const EdgeInsets.all(10)),
                   TextField(
-                    controller: TextEditingController(text: mqttPorta),
+                    controller:
+                        TextEditingController(text: mqttPorta.toString()),
                     onChanged: (value) {
-                      mqttPorta = value;
+                      mqttPorta = value as int;
                     },
+                    keyboardType: TextInputType.number,
                     decoration: const InputDecoration(
                       filled: true,
                       fillColor: Colors.white,
@@ -83,7 +90,15 @@ class conteudoPaginaConfiguracoes extends StatelessWidget {
                       fixedSize: const Size(120, 40),
                       textStyle: const TextStyle(fontSize: 25),
                     ),
-                    onPressed: () {},
+                    onPressed: () {
+                      if (mqttClient.connectionStatus!.state !=
+                          MqttConnectionState.connected) {
+                        conectarComMqtt();
+                      } else {
+                        mqttClient.disconnect();
+                        conectarComMqtt();
+                      }
+                    },
                     child: const Text("Conectar"),
                   ),
                 ],
@@ -93,5 +108,33 @@ class conteudoPaginaConfiguracoes extends StatelessWidget {
         ],
       ),
     );
+  }
+
+  void conectarComMqtt() async {
+    mqttClient.setProtocolV311();
+    mqttClient.keepAlivePeriod = 20;
+    mqttClient.port = mqttPorta;
+    mqttClient.server = mqttEndereco;
+    mqttClient.clientIdentifier = mqttClientID;
+
+    try {
+      await mqttClient.connect();
+    } on NoConnectionException catch (e) {
+      mqttClient.disconnect();
+    } on SocketException catch (e) {
+      mqttClient.disconnect();
+    }
+
+    if (mqttClient.connectionStatus!.state == MqttConnectionState.connected) {
+      print('MQTT CONECTADO');
+    } else {
+      print('MQTT DESCONECTADO');
+      mqttClient.disconnect();
+    }
+
+    const pubTopic = 'Dart/Mqtt_client/testtopic';
+    final builder = MqttClientPayloadBuilder();
+    builder.addString('Hello from mqtt_client');
+    mqttClient.publishMessage(pubTopic, MqttQos.exactlyOnce, builder.payload!);
   }
 }
